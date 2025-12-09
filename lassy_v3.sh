@@ -122,7 +122,7 @@ line=$(awk -F, -v b="$bssid_input" '$1 ~ b {print $0}' "$csv" | head -n1)
 if [ -z "$line" ]; then
   echo -e "${YELLOW}No encontré el BSSID en los resultados actuales. Igual continuarás intentando captura pasiva.${RESET}"
   # Si no está, pedimos canal manualmente
-  read -p "$(echo -e ${CYAN}Introduce el canal de la red (número): ${RESET})" channel
+  read -p "${CYAN}Introduce el canal de la red número: ${RESET}" channel
 else
   # Campos: BSSID, First time seen, Last time seen, channel, speed, privacy, cipher, auth, power, # beacons, # IV, LAN IP, ID-length, ESSID, Key
   channel=$(echo "$line" | awk -F, '{gsub(/^[ \t]+|[ \t]+$/,"",$4); print $4}')
