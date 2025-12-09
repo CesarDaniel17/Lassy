@@ -19,8 +19,7 @@ banner() {
     echo "=============================================="
     echo -e "${RESET}\n"
 }
-
-sudo
+banner
 
 #interfaces WLAN
 echo -e "${CYAN}Detectando interfaces disponibles..."
